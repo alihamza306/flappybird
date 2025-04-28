@@ -1,20 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9951664682787933"
-     crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird Deluxe</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
             font-family: 'Arial', sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
             user-select: none;
+        }
+
+        #ad-container {
+            width: 400px;
+            height: 100px;
+            margin: 10px 0;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #ad-container.top-ad {
+            margin-bottom: 20px;
+        }
+
+        #ad-container.bottom-ad {
+            margin-top: 20px;
+        }
+
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         #game-container {
@@ -55,7 +84,7 @@
         }
 
         .pipe-bottom {
-            bottom: 60px; /* Account for ground height */
+            bottom: 60px;
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="70" height="300"><path d="M0,0 Q35,20 70,0 L70,300 L0,300 Z" fill="%232E7D32"/><path d="M0,10 L70,10" stroke="%238BC34A" stroke-width="5"/><path d="M10,20 L60,20" stroke="%238BC34A" stroke-width="5"/></svg>');
             background-repeat: repeat-y;
             background-position: top;
@@ -149,23 +178,88 @@
             text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
             z-index: 100;
         }
+
+        #reward-ad-button {
+            margin-top: 10px;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #reward-ad-button:hover {
+            background-color: #45a049;
+        }
+
+        /* Interstitial ad overlay */
+        #interstitial-ad {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #interstitial-ad-content {
+            width: 80%;
+            max-width: 400px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        #close-interstitial {
+            margin-top: 15px;
+            background-color: #f44336;
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="score-display">0</div>
-        <div id="high-score">High Score: 0</div>
-        <div id="bird"></div>
-        <div id="ground"></div>
-        <div id="game-over">
-            <h1>Game Over!</h1>
-            <p id="final-score">Score: 0</p>
-            <button id="restart-btn">Play Again</button>
+    <div id="game-wrapper">
+        <!-- Top Banner Ad -->
+        <div id="ad-container" class="top-ad">
+            <!-- Replace this with your actual ad code -->
+            <p>Banner Ad Space (728x90)</p>
         </div>
-        <div id="start-screen">
-            <h1>Flappy Bird Deluxe</h1>
-            <p>Press SPACE or CLICK to start</p>
-            <button id="start-btn">Start Game</button>
+
+        <!-- Game Container -->
+        <div id="game-container">
+            <div id="score-display">0</div>
+            <div id="high-score">High Score: 0</div>
+            <div id="bird"></div>
+            <div id="ground"></div>
+            <div id="game-over">
+                <h1>Game Over!</h1>
+                <p id="final-score">Score: 0</p>
+                <button id="restart-btn">Play Again</button>
+                <button id="reward-ad-button">Watch Ad for 2x Points</button>
+            </div>
+            <div id="start-screen">
+                <h1>Flappy Bird Deluxe</h1>
+                <p>Press SPACE or CLICK to start</p>
+                <button id="start-btn">Start Game</button>
+            </div>
+        </div>
+
+        <!-- Bottom Banner Ad -->
+        <div id="ad-container" class="bottom-ad">
+            <!-- Replace this with your actual ad code -->
+            <p>Banner Ad Space (728x90)</p>
+        </div>
+    </div>
+
+    <!-- Interstitial Ad Overlay -->
+    <div id="interstitial-ad">
+        <div id="interstitial-ad-content">
+            <h2>Advertisement</h2>
+            <p>This would be your interstitial ad content.</p>
+            <button id="close-interstitial">Close Ad</button>
         </div>
     </div>
 
@@ -180,7 +274,10 @@
             const finalScoreDisplay = document.getElementById('final-score');
             const restartBtn = document.getElementById('restart-btn');
             const startBtn = document.getElementById('start-btn');
+            const rewardAdBtn = document.getElementById('reward-ad-button');
             const ground = document.getElementById('ground');
+            const interstitialAd = document.getElementById('interstitial-ad');
+            const closeInterstitial = document.getElementById('close-interstitial');
             
             let birdPosition = 300;
             let birdVelocity = 0;
@@ -198,6 +295,8 @@
             let cloudLoopId;
             let animationFrameId;
             let rotationAngle = 0;
+            let adShown = false;
+            let doublePointsActive = false;
             
             highScoreDisplay.textContent = `High Score: ${highScore}`;
             
@@ -261,6 +360,7 @@
                 gameSpeed = 2;
                 pipeGap = 180;
                 pipeFrequency = 2000;
+                doublePointsActive = false;
                 
                 // Clear existing pipes
                 pipes.forEach(pipe => {
@@ -289,6 +389,44 @@
                 gameLoop();
                 pipeLoopId = setInterval(createPipe, pipeFrequency);
                 cloudLoopId = setInterval(moveClouds, 50);
+                
+                // Show interstitial ad occasionally (every 3 games)
+                if (!adShown && Math.random() < 0.33) {
+                    showInterstitialAd();
+                    adShown = true;
+                }
+            }
+            
+            // Show interstitial ad
+            function showInterstitialAd() {
+                interstitialAd.style.display = 'flex';
+                gameRunning = false;
+            }
+            
+            // Close interstitial ad
+            function closeInterstitialAd() {
+                interstitialAd.style.display = 'none';
+                if (startScreen.style.display === 'none') {
+                    gameRunning = true;
+                    gameLoop();
+                }
+            }
+            
+            // Activate double points
+            function activateDoublePoints() {
+                doublePointsActive = true;
+                rewardAdBtn.textContent = '2x Points Active!';
+                rewardAdBtn.disabled = true;
+                
+                // Show ad (in a real implementation, this would show a rewarded ad)
+                showInterstitialAd();
+                
+                // Double points lasts for 30 seconds
+                setTimeout(() => {
+                    doublePointsActive = false;
+                    rewardAdBtn.textContent = 'Watch Ad for 2x Points';
+                    rewardAdBtn.disabled = false;
+                }, 30000);
             }
             
             // Game over
@@ -341,7 +479,7 @@
                     // Check if bird passed the pipe
                     if (!pipe.passed && pipe.x + pipe.width < 50) {
                         pipe.passed = true;
-                        score++;
+                        score += doublePointsActive ? 2 : 1;
                         scoreDisplay.textContent = score;
                         
                         // Increase difficulty
@@ -425,6 +563,8 @@
             gameContainer.addEventListener('click', birdJump);
             startBtn.addEventListener('click', startGame);
             restartBtn.addEventListener('click', startGame);
+            rewardAdBtn.addEventListener('click', activateDoublePoints);
+            closeInterstitial.addEventListener('click', closeInterstitialAd);
             
             // Initialize clouds
             createClouds();
