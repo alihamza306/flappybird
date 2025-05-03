@@ -350,33 +350,41 @@
             
             // Start game
             function startGame() {
+                // Clear any existing game loops
+                clearInterval(pipeLoopId);
+                clearInterval(cloudLoopId);
+                cancelAnimationFrame(animationFrameId);
+                
                 gameRunning = true;
                 score = 0;
                 birdPosition = 300;
                 birdVelocity = 0;
                 rotationAngle = 0;
                 bird.style.transform = 'rotate(0deg)';
+                bird.style.top = `${birdPosition}px`;
                 scoreDisplay.textContent = '0';
                 gameSpeed = 2;
                 pipeGap = 180;
                 pipeFrequency = 2000;
                 doublePointsActive = false;
+                rewardAdBtn.textContent = 'Watch Ad for 2x Points';
+                rewardAdBtn.disabled = false;
                 
                 // Clear existing pipes
                 pipes.forEach(pipe => {
-                    if (pipe.topPipe.parentNode) {
-                        pipe.topPipe.remove();
+                    if (pipe.topPipe.parentNode === gameContainer) {
+                        gameContainer.removeChild(pipe.topPipe);
                     }
-                    if (pipe.bottomPipe.parentNode) {
-                        pipe.bottomPipe.remove();
+                    if (pipe.bottomPipe.parentNode === gameContainer) {
+                        gameContainer.removeChild(pipe.bottomPipe);
                     }
                 });
                 pipes = [];
                 
                 // Clear clouds
                 clouds.forEach(cloud => {
-                    if (cloud.element.parentNode) {
-                        cloud.element.remove();
+                    if (cloud.element.parentNode === gameContainer) {
+                        gameContainer.removeChild(cloud.element);
                     }
                 });
                 clouds = [];
@@ -401,6 +409,9 @@
             function showInterstitialAd() {
                 interstitialAd.style.display = 'flex';
                 gameRunning = false;
+                clearInterval(pipeLoopId);
+                clearInterval(cloudLoopId);
+                cancelAnimationFrame(animationFrameId);
             }
             
             // Close interstitial ad
@@ -409,6 +420,8 @@
                 if (startScreen.style.display === 'none') {
                     gameRunning = true;
                     gameLoop();
+                    pipeLoopId = setInterval(createPipe, pipeFrequency);
+                    cloudLoopId = setInterval(moveClouds, 50);
                 }
             }
             
@@ -431,6 +444,8 @@
             
             // Game over
             function gameOver() {
+                if (!gameRunning) return;
+                
                 gameRunning = false;
                 clearInterval(pipeLoopId);
                 clearInterval(cloudLoopId);
@@ -445,6 +460,7 @@
                 
                 finalScoreDisplay.textContent = `Score: ${score}`;
                 gameOverDisplay.style.display = 'block';
+                adShown = false; // Reset ad flag for next game
             }
             
             // Game loop
@@ -461,8 +477,15 @@
                 bird.style.transform = `rotate(${rotationAngle}deg)`;
                 
                 // Check for collisions with ground or ceiling
-                if (birdPosition >= gameContainer.offsetHeight - ground.offsetHeight - bird.offsetHeight || birdPosition <= 0) {
+                if (birdPosition >= gameContainer.offsetHeight - ground.offsetHeight - bird.offsetHeight) {
+                    birdPosition = gameContainer.offsetHeight - ground.offsetHeight - bird.offsetHeight;
                     bird.style.transform = 'rotate(90deg)';
+                    gameOver();
+                    return;
+                }
+                
+                if (birdPosition <= 0) {
+                    birdPosition = 0;
                     gameOver();
                     return;
                 }
@@ -486,24 +509,32 @@
                         if (score % 5 === 0) {
                             gameSpeed += 0.2;
                             pipeFrequency = Math.max(1000, pipeFrequency - 50);
+                            clearInterval(pipeLoopId);
+                            pipeLoopId = setInterval(createPipe, pipeFrequency);
                             pipeGap = Math.max(120, pipeGap - 5);
                         }
                     }
                     
                     // Check for collisions with pipe
-                    if (
-                        50 < pipe.x + pipe.width &&
-                        50 + bird.offsetWidth > pipe.x &&
-                        (birdPosition < pipe.topHeight || birdPosition + bird.offsetHeight > pipe.topHeight + pipeGap)
-                    ) {
-                        gameOver();
-                        return;
+                    const birdRight = 50 + bird.offsetWidth;
+                    const pipeRight = pipe.x + pipe.width;
+                    const birdBottom = birdPosition + bird.offsetHeight;
+                    
+                    if (50 < pipeRight && birdRight > pipe.x) {
+                        if (birdPosition < pipe.topHeight || birdBottom > pipe.topHeight + pipeGap) {
+                            gameOver();
+                            return;
+                        }
                     }
                     
                     // Remove pipes that are off screen
                     if (pipe.x + pipe.width < 0) {
-                        pipe.topPipe.remove();
-                        pipe.bottomPipe.remove();
+                        if (pipe.topPipe.parentNode === gameContainer) {
+                            gameContainer.removeChild(pipe.topPipe);
+                        }
+                        if (pipe.bottomPipe.parentNode === gameContainer) {
+                            gameContainer.removeChild(pipe.bottomPipe);
+                        }
                         pipes.splice(i, 1);
                     }
                 }
@@ -528,6 +559,7 @@
                 bottomPipe.className = 'pipe pipe-bottom';
                 bottomPipe.style.height = `${gameContainer.offsetHeight - topHeight - pipeGap - ground.offsetHeight}px`;
                 bottomPipe.style.left = `${gameContainer.offsetWidth}px`;
+                bottomPipe.style.bottom = `${ground.offsetHeight}px`;
                 
                 gameContainer.appendChild(topPipe);
                 gameContainer.appendChild(bottomPipe);
@@ -546,6 +578,7 @@
             function birdJump() {
                 if (!gameRunning && startScreen.style.display === 'none') {
                     startGame();
+                    return;
                 }
                 if (gameRunning) {
                     birdVelocity = -8;
